@@ -1,0 +1,1833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Residential Header &amp; Beam Sizing Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js" crossorigin="anonymous"></script>
+<style>
+:root {
+  --navy: #1a2744;
+  --navy-light: #2a3f6a;
+  --blue: #3b6cb5;
+  --green: #2e7d32;
+  --red: #c62828;
+  --orange: #e65100;
+  --gray-50: #fafafa;
+  --gray-100: #f5f5f5;
+  --gray-200: #eeeeee;
+  --gray-300: #e0e0e0;
+  --gray-600: #757575;
+  --gray-800: #424242;
+  --gray-900: #212121;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-100); color: var(--gray-900); font-size: 14px; line-height: 1.5; }
+
+header { background: var(--navy); color: #fff; padding: 16px 24px; }
+header h1 { font-size: 20px; font-weight: 600; }
+header .subtitle { font-size: 12px; color: #94a3c4; margin-top: 2px; }
+
+.app { display: flex; gap: 0; min-height: calc(100vh - 60px); }
+.input-panel { width: 380px; min-width: 380px; background: #fff; border-right: 1px solid var(--gray-300); padding: 20px; overflow-y: auto; }
+.output-panel { flex: 1; padding: 20px; overflow-y: auto; }
+
+.section { margin-bottom: 20px; }
+.section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--navy); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--navy); }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-800); margin-bottom: 4px; }
+.field select, .field input { width: 100%; padding: 8px 10px; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 13px; background: #fff; }
+.field select:focus, .field input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 2px rgba(59,108,181,0.15); }
+.field .hint { font-size: 11px; color: var(--gray-600); margin-top: 2px; }
+.field-row { display: flex; gap: 8px; }
+.field-row .field { flex: 1; }
+
+.toggle-group { display: flex; gap: 0; border: 1px solid var(--gray-300); border-radius: 4px; overflow: hidden; }
+.toggle-group button { flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 600; border: none; background: #fff; cursor: pointer; border-right: 1px solid var(--gray-300); color: var(--gray-800); }
+.toggle-group button:last-child { border-right: none; }
+.toggle-group button.active { background: var(--navy); color: #fff; }
+
+.btn-calc { width: 100%; padding: 12px; background: var(--blue); color: #fff; border: none; border-radius: 4px; font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 0.3px; }
+.btn-calc:hover { background: var(--navy-light); }
+
+/* Results */
+.result-card { background: #fff; border-radius: 6px; border: 1px solid var(--gray-300); padding: 20px; margin-bottom: 16px; }
+.result-card h3 { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+
+.status-banner { padding: 14px 18px; border-radius: 6px; font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 16px; }
+.status-pass { background: #e8f5e9; color: var(--green); border: 2px solid var(--green); }
+.status-fail { background: #ffebee; color: var(--red); border: 2px solid var(--red); }
+
+.check-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gray-200); }
+.check-row:last-child { border-bottom: none; }
+.check-label { font-size: 13px; color: var(--gray-800); }
+.check-value { font-size: 13px; font-weight: 600; }
+.check-pass { color: var(--green); }
+.check-fail { color: var(--red); }
+.check-warn { color: var(--orange); }
+
+.utilization-bar { height: 8px; background: var(--gray-200); border-radius: 4px; margin-top: 4px; overflow: hidden; }
+.utilization-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.util-ok { background: var(--green); }
+.util-warn { background: var(--orange); }
+.util-fail { background: var(--red); }
+
+.spec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.spec-table th, .spec-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--gray-200); }
+.spec-table th { font-weight: 600; color: var(--gray-600); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+.header-diagram { background: var(--gray-50); border: 1px solid var(--gray-300); border-radius: 4px; padding: 16px; text-align: center; margin: 12px 0; }
+.header-diagram svg { max-width: 100%; }
+
+.notes-list { font-size: 12px; color: var(--gray-600); }
+.notes-list li { margin-bottom: 4px; }
+
+.stamp-block { border: 3px solid var(--navy); padding: 20px; margin-top: 16px; text-align: center; min-height: 140px; }
+.stamp-block .stamp-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--gray-600); }
+
+.btn-print { padding: 10px 20px; background: var(--navy); color: #fff; border: none; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; margin-right: 8px; }
+.btn-print:hover { background: var(--navy-light); }
+
+.empty-state { text-align: center; color: var(--gray-600); padding: 60px 20px; }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+.disclaimer { font-size: 11px; color: var(--gray-600); background: #fff8e1; border: 1px solid #fff176; border-radius: 4px; padding: 10px; margin-top: 12px; }
+
+/* Print styles */
+@media print {
+  /* Kill browser chrome: headers, footers, URL, date, margins */
+  @page {
+    size: letter;
+    margin: 0.5in 0.6in;
+  }
+  /* Hide everything that isn't the spec sheet output */
+  body { background: #fff; font-size: 11px; margin: 0; padding: 0; }
+  header, .input-panel, .btn-print, .btn-calc, .empty-state, .disclaimer,
+  .analysis-options-section { display: none !important; }
+  /* Hide parent site elements when embedded (common wrapper classes) */
+  nav, .navbar, .site-header, .site-footer, footer,
+  .sidebar, .menu, .cookie-banner, .chat-widget { display: none !important; }
+  .app { display: block; }
+  .output-panel { padding: 0; }
+  .result-card { border: 1px solid #999; page-break-inside: avoid; margin-bottom: 10px; padding: 14px; }
+  .status-banner { font-size: 14px; padding: 10px; }
+  .spec-sheet-only { display: block !important; }
+  .no-print { display: none !important; }
+  /* Clean link appearance */
+  a { color: inherit; text-decoration: none; }
+}
+
+.spec-sheet-only { display: none; }
+.no-print { /* visible on screen, hidden in print */ }
+
+@media (max-width: 900px) {
+  .app { flex-direction: column; }
+  .input-panel { width: 100%; min-width: auto; border-right: none; border-bottom: 1px solid var(--gray-300); }
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Residential Header &amp; Beam Sizing Calculator</h1>
+  <div class="subtitle">NDS 2018 / IRC 2021 &mdash; Allowable Stress Design (ASD)</div>
+</header>
+
+<div class="app">
+  <!-- INPUT PANEL -->
+  <div class="input-panel">
+
+    <div class="section">
+      <div class="section-title">Calculation Mode</div>
+      <div class="toggle-group" id="modeToggle">
+        <button class="active" data-mode="irc" onclick="setMode('irc')">IRC Prescriptive</button>
+        <button data-mode="nds" onclick="setMode('nds')">NDS Engineering</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Opening &amp; Member</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Span (ft)</label>
+          <input type="number" id="spanFt" value="6" min="1" max="30" step="1">
+        </div>
+        <div class="field">
+          <label>Span (in)</label>
+          <input type="number" id="spanIn" value="0" min="0" max="11" step="1">
+        </div>
+      </div>
+      <div class="field">
+        <label>Lumber Type</label>
+        <select id="lumberType" onchange="onLumberTypeChange()">
+          <option value="sawn">Sawn Dimensional Lumber</option>
+          <option value="lvl">LVL (Laminated Veneer Lumber)</option>
+          <option value="psl">PSL (Parallel Strand Lumber)</option>
+          <option value="lsl">LSL (Laminated Strand Lumber)</option>
+          <option value="glulam">Glulam</option>
+        </select>
+      </div>
+      <div id="sawnOptions">
+        <div class="field">
+          <label>Species Group</label>
+          <select id="species" onchange="onSpeciesChange()">
+          </select>
+        </div>
+        <div class="field">
+          <label>Grade</label>
+          <select id="grade">
+          </select>
+        </div>
+      </div>
+      <div id="engOptions" class="hidden">
+        <div class="field">
+          <label>Product</label>
+          <select id="engProduct" onchange="onEngProductChange()">
+          </select>
+        </div>
+        <div class="field">
+          <label>Width (in)</label>
+          <select id="engWidth">
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Number of Plies</label>
+          <select id="plies">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Member Depth</label>
+          <select id="depth">
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- IRC MODE OPTIONS -->
+    <div class="section" id="ircSection">
+      <div class="section-title">IRC Load Condition</div>
+      <div class="field">
+        <label>Supported Loads</label>
+        <select id="ircLoadCase">
+          <option value="roof">Roof &amp; Ceiling Only</option>
+          <option value="oneFloor" selected>One Floor + Roof &amp; Ceiling</option>
+          <option value="twoFloor">Two Floors + Roof &amp; Ceiling</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Building Width (ft)</label>
+        <select id="buildingWidth">
+          <option value="20">20</option>
+          <option value="24">24</option>
+          <option value="28" selected>28</option>
+          <option value="32">32</option>
+          <option value="36">36</option>
+          <option value="40">40</option>
+        </select>
+        <div class="hint">Used to determine tributary width (building width &divide; 2 + eave)</div>
+      </div>
+      <div class="field">
+        <label>Eave/Overhang (ft)</label>
+        <input type="number" id="eaveOverhang" value="0" min="0" max="4" step="0.5">
+        <div class="hint">Roof overhang beyond exterior wall. Adds to tributary width for roof loads.</div>
+      </div>
+      <div class="field">
+        <label>Ground Snow Load (psf)</label>
+        <input type="number" id="ircSnow" value="0" min="0" max="100" step="5">
+        <div class="hint">Enter 0 if roof live load governs (most areas below ~30 psf ground snow)</div>
+      </div>
+      <div class="field">
+        <label>Floor Live Load (psf)</label>
+        <select id="ircFloorLL">
+          <option value="30">30 psf (Sleeping Areas)</option>
+          <option value="40" selected>40 psf (All Other Living Areas)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- NDS MODE OPTIONS -->
+    <div class="section hidden" id="ndsSection">
+      <div class="section-title">Applied Loads (NDS)</div>
+      <div class="field">
+        <label>Tributary Width (ft)</label>
+        <input type="number" id="tribWidth" value="14" min="1" max="40" step="0.5">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Dead Load (psf)</label>
+          <input type="number" id="ndsDL" value="15" min="0" max="100" step="1">
+        </div>
+        <div class="field">
+          <label>Floor Live (psf)</label>
+          <input type="number" id="ndsLL" value="40" min="0" max="100" step="5">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Roof Live (psf)</label>
+          <input type="number" id="ndsRoofLL" value="20" min="0" max="60" step="5">
+        </div>
+        <div class="field">
+          <label>Snow Load (psf)</label>
+          <input type="number" id="ndsSL" value="0" min="0" max="150" step="5">
+        </div>
+      </div>
+      <div class="field">
+        <label>Additional Uniform Load (plf)</label>
+        <input type="number" id="ndsAddl" value="0" min="0" max="1000" step="10">
+        <div class="hint">Additional dead load applied directly as plf (e.g., wall above, point loads distributed)</div>
+      </div>
+      <div class="field">
+        <label>Load Duration Factor (C<sub>D</sub>) Override</label>
+        <select id="ndsCd">
+          <option value="auto" selected>Auto (based on governing load combo)</option>
+          <option value="0.9">0.90 &mdash; Dead Load Only</option>
+          <option value="1.0">1.00 &mdash; Occupancy Live Load</option>
+          <option value="1.15">1.15 &mdash; Roof Live / Construction</option>
+          <option value="1.15">1.15 &mdash; Snow Load (NDS 2018)</option>
+          <option value="1.6">1.60 &mdash; Wind / Earthquake</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Deflection Limit &mdash; Live Load</label>
+        <select id="ndsDeflLive">
+          <option value="360" selected>L/360</option>
+          <option value="480">L/480</option>
+          <option value="240">L/240</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Deflection Limit &mdash; Total Load</label>
+        <select id="ndsDeflTotal">
+          <option value="240" selected>L/240</option>
+          <option value="180">L/180</option>
+          <option value="360">L/360</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Analysis Options</div>
+      <div class="field" style="display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="shearReduction" style="width:auto;">
+        <label for="shearReduction" style="margin:0; cursor:pointer;">
+          Reduce shear at <em>d</em> from support face (NDS 3.4.3.1)
+        </label>
+      </div>
+      <div class="hint" style="margin-top:2px;">Applies to uniformly loaded beams with full bearing. Conservative if unchecked.</div>
+    </div>
+
+    <div class="section">
+      <button class="btn-calc" onclick="calculate()">Calculate Header Size</button>
+      <div class="disclaimer">
+        <strong>Important:</strong> This calculator provides engineering analysis per NDS 2018 and IRC 2021.
+        All results must be verified by a licensed Professional Engineer before use in construction.
+        Local code amendments and site-specific conditions may require additional analysis.
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTPUT PANEL -->
+  <div class="output-panel" id="outputPanel">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">&#9881;</div>
+      <p>Configure your header parameters and click <strong>Calculate</strong> to see results.</p>
+    </div>
+    <div id="results" class="hidden"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================================
+// SAWN LUMBER SPECIES DATABASE — NDS 2018 Supplement Table 4A
+// Values: Fb, Ft, Fv, Fc_perp, Fc (by width), E, Emin (psi)
+// CF (size factor) applied separately except for Southern Pine
+// ============================================================================
+const SAWN_SPECIES = {
+  "Douglas Fir-Larch": {
+    grades: {
+      "Select Structural": { Fb:1500, Ft:1000, Fv:180, Fc_perp:625, Fc:{4:1700,6:1650,8:1600,10:1550,12:1500,14:1400}, E:1900000, Emin:690000 },
+      "#1":               { Fb:1200, Ft:800,  Fv:180, Fc_perp:625, Fc:{4:1500,6:1450,8:1400,10:1350,12:1300,14:1250}, E:1700000, Emin:620000 },
+      "#2":               { Fb:900,  Ft:575,  Fv:180, Fc_perp:625, Fc:{4:1350,6:1300,8:1250,10:1200,12:1150,14:1100}, E:1600000, Emin:580000 },
+      "#3":               { Fb:525,  Ft:325,  Fv:180, Fc_perp:625, Fc:{4:775, 6:750, 8:725, 10:700, 12:675, 14:625},  E:1400000, Emin:510000 }
+    },
+    hasSizeFactor: true
+  },
+  "Douglas Fir-Larch (North)": {
+    grades: {
+      "Select Structural": { Fb:1350, Ft:825,  Fv:180, Fc_perp:625, Fc:{4:1900,6:1750,8:1700,10:1600,12:1550,14:1450}, E:1900000, Emin:690000 },
+      "#1/#2":             { Fb:850,  Ft:500,  Fv:180, Fc_perp:625, Fc:{4:1150,6:1050,8:1000,10:975, 12:950, 14:875},  E:1600000, Emin:580000 },
+      "#3":                { Fb:475,  Ft:275,  Fv:180, Fc_perp:625, Fc:{4:650, 6:600, 8:575, 10:550, 12:525, 14:500},  E:1400000, Emin:510000 }
+    },
+    hasSizeFactor: true
+  },
+  "Hem-Fir": {
+    grades: {
+      "Select Structural": { Fb:1400, Ft:925,  Fv:150, Fc_perp:405, Fc:{4:1500,6:1450,8:1400,10:1350,12:1300,14:1250}, E:1600000, Emin:580000 },
+      "#1":               { Fb:1100, Ft:725,  Fv:150, Fc_perp:405, Fc:{4:1350,6:1300,8:1250,10:1200,12:1150,14:1100}, E:1500000, Emin:550000 },
+      "#2":               { Fb:850,  Ft:525,  Fv:150, Fc_perp:405, Fc:{4:1300,6:1250,8:1200,10:1150,12:1100,14:1050}, E:1300000, Emin:470000 },
+      "#3":               { Fb:500,  Ft:300,  Fv:150, Fc_perp:405, Fc:{4:725, 6:700, 8:675, 10:650, 12:625, 14:600},  E:1200000, Emin:440000 }
+    },
+    hasSizeFactor: true
+  },
+  "Hem-Fir (North)": {
+    grades: {
+      "Select Structural": { Fb:1300, Ft:775,  Fv:145, Fc_perp:345, Fc:{4:1650,6:1600,8:1550,10:1500,12:1450,14:1350}, E:1700000, Emin:620000 },
+      "#1/#2":             { Fb:770,  Ft:450,  Fv:145, Fc_perp:345, Fc:{4:1100,6:1050,8:1000,10:975, 12:950, 14:875},  E:1300000, Emin:470000 },
+      "#3":                { Fb:440,  Ft:250,  Fv:145, Fc_perp:345, Fc:{4:625, 6:600, 8:575, 10:550, 12:525, 14:500},  E:1100000, Emin:400000 }
+    },
+    hasSizeFactor: true
+  },
+  // Southern Pine — NDS 2018 Supplement Table 4B (post-2012 SPIB downgrade)
+  // These are the CURRENT reduced values; pre-2013 values were significantly higher
+  "Southern Pine": {
+    grades: {
+      "Select Structural": { Fb_bySize:{4:1850,6:1600,8:1500,10:1400,12:1250,14:1250}, Ft_bySize:{4:1100,6:950, 8:875, 10:825, 12:750, 14:750},  Fv:175, Fc_perp:565, Fc:{4:1800,6:1750,8:1700,10:1650,12:1600,14:1550}, E:1700000, Emin:620000 },
+      "#1":               { Fb_bySize:{4:1250,6:1050,8:1000,10:925, 12:850, 14:850},  Ft_bySize:{4:725, 6:625, 8:575, 10:550, 12:500, 14:500},  Fv:175, Fc_perp:565, Fc:{4:1650,6:1600,8:1550,10:1500,12:1450,14:1400}, E:1600000, Emin:580000 },
+      "#2":               { Fb_bySize:{4:925, 6:825, 8:775, 10:750, 12:700, 14:700},   Ft_bySize:{4:550, 6:475, 8:450, 10:425, 12:400, 14:400},  Fv:175, Fc_perp:565, Fc:{4:1450,6:1400,8:1350,10:1300,12:1250,14:1200}, E:1400000, Emin:510000 },
+      "#3":               { Fb_bySize:{4:525, 6:475, 8:450, 10:425, 12:400, 14:400},   Ft_bySize:{4:300, 6:275, 8:250, 10:250, 12:225, 14:225},  Fv:175, Fc_perp:565, Fc:{4:825, 6:800, 8:775, 10:750, 12:725, 14:700},  E:1200000, Emin:440000 }
+    },
+    hasSizeFactor: false // Size adjustments already in tabulated values for SP
+  },
+  "Spruce-Pine-Fir": {
+    grades: {
+      "Select Structural": { Fb:1250, Ft:800,  Fv:135, Fc_perp:425, Fc:{4:1400,6:1350,8:1300,10:1250,12:1200,14:1150}, E:1500000, Emin:550000 },
+      "#1":               { Fb:1000, Ft:650,  Fv:135, Fc_perp:425, Fc:{4:1150,6:1100,8:1050,10:1000,12:975, 14:925},  E:1400000, Emin:510000 },
+      "#2":               { Fb:875,  Ft:550,  Fv:135, Fc_perp:425, Fc:{4:1150,6:1100,8:1050,10:1000,12:975, 14:925},  E:1400000, Emin:510000 },
+      "#3":               { Fb:500,  Ft:300,  Fv:135, Fc_perp:425, Fc:{4:650, 6:625, 8:600, 10:575, 12:550, 14:525},  E:1200000, Emin:440000 }
+    },
+    hasSizeFactor: true
+  },
+  "Spruce-Pine-Fir (South)": {
+    grades: {
+      "Select Structural": { Fb:1300, Ft:775,  Fv:135, Fc_perp:335, Fc:{4:1400,6:1350,8:1300,10:1250,12:1200,14:1150}, E:1300000, Emin:470000 },
+      "#1":               { Fb:1050, Ft:625,  Fv:135, Fc_perp:335, Fc:{4:1050,6:1000,8:975, 10:950, 12:900, 14:875},  E:1200000, Emin:440000 },
+      "#2":               { Fb:775,  Ft:450,  Fv:135, Fc_perp:335, Fc:{4:850, 6:825, 8:800, 10:750, 12:725, 14:700},  E:1100000, Emin:400000 },
+      "#3":               { Fb:450,  Ft:250,  Fv:135, Fc_perp:335, Fc:{4:475, 6:450, 8:425, 10:425, 12:400, 14:375},  E:1000000, Emin:370000 }
+    },
+    hasSizeFactor: true
+  },
+  "Redwood (Clear Structural)": {
+    grades: {
+      "Clear Structural": { Fb:1750, Ft:1100, Fv:160, Fc_perp:650, Fc:{4:1850,6:1800,8:1750,10:1700,12:1650,14:1600}, E:1400000, Emin:510000 },
+      "Select Structural": { Fb:1350, Ft:850,  Fv:160, Fc_perp:425, Fc:{4:1250,6:1200,8:1150,10:1100,12:1050,14:1000}, E:1300000, Emin:470000 },
+      "#1":               { Fb:1000, Ft:625,  Fv:160, Fc_perp:425, Fc:{4:1000,6:975, 8:950, 10:925, 12:900, 14:850},  E:1100000, Emin:400000 },
+      "#2":               { Fb:750,  Ft:475,  Fv:160, Fc_perp:425, Fc:{4:825, 6:800, 8:775, 10:750, 12:725, 14:700},  E:1000000, Emin:370000 }
+    },
+    hasSizeFactor: true
+  }
+};
+
+// CF - Size Factor (NDS Table 4A adjustment) — NOT applied to Southern Pine
+const SIZE_FACTORS = {
+  // nominal depth: CF for Fb (2" thick dimension lumber)
+  4: 1.50, 6: 1.30, 8: 1.20, 10: 1.10, 12: 1.00, 14: 0.90
+};
+
+// Actual dimensions of sawn lumber (nominal -> actual)
+const SAWN_ACTUAL = {
+  4: { b: 1.5, d: 3.5 },
+  6: { b: 1.5, d: 5.5 },
+  8: { b: 1.5, d: 7.25 },
+  10: { b: 1.5, d: 9.25 },
+  12: { b: 1.5, d: 11.25 },
+  14: { b: 1.5, d: 13.25 }
+};
+
+// ============================================================================
+// ENGINEERED LUMBER DATABASE
+// ============================================================================
+const ENGINEERED_LUMBER = {
+  lvl: {
+    name: "LVL (Laminated Veneer Lumber)",
+    products: {
+      "1.9E Microllam/Generic LVL": { Fb: 2600, Fv: 285, Fc_perp: 750, E: 1900000, Emin: 1010000 },
+      "2.0E LVL": { Fb: 2600, Fv: 285, Fc_perp: 750, E: 2000000, Emin: 1060000 },
+      "2.1E High-Grade LVL": { Fb: 2800, Fv: 285, Fc_perp: 750, E: 2100000, Emin: 1120000 },
+      "Custom (enter values)": { Fb: 0, Fv: 0, Fc_perp: 0, E: 0, Emin: 0 }
+    },
+    widths: [1.75, 3.5, 5.25, 7.0],
+    depths: [5.5, 7.25, 9.25, 9.5, 11.25, 11.875, 14.0, 16.0, 18.0, 20.0, 24.0]
+  },
+  psl: {
+    name: "PSL (Parallel Strand Lumber)",
+    products: {
+      "2.0E Parallam PSL": { Fb: 2900, Fv: 290, Fc_perp: 750, E: 2000000, Emin: 1060000 },
+      "1.8E PSL": { Fb: 2500, Fv: 260, Fc_perp: 700, E: 1800000, Emin: 960000 },
+      "Custom (enter values)": { Fb: 0, Fv: 0, Fc_perp: 0, E: 0, Emin: 0 }
+    },
+    widths: [3.5, 5.25, 7.0],
+    depths: [7.25, 9.25, 9.5, 11.25, 11.875, 14.0, 16.0, 18.0]
+  },
+  lsl: {
+    name: "LSL (Laminated Strand Lumber)",
+    products: {
+      "1.55E TimberStrand LSL": { Fb: 2325, Fv: 460, Fc_perp: 875, E: 1550000, Emin: 830000 },
+      "1.35E LSL": { Fb: 1730, Fv: 410, Fc_perp: 750, E: 1350000, Emin: 720000 },
+      "Custom (enter values)": { Fb: 0, Fv: 0, Fc_perp: 0, E: 0, Emin: 0 }
+    },
+    widths: [1.5, 1.75, 3.5],
+    depths: [7.25, 9.25, 9.5, 11.25, 11.875, 14.0, 16.0]
+  },
+  glulam: {
+    name: "Glulam",
+    products: {
+      "24F-V4 DF/DF": { Fb: 2400, Fv: 265, Fc_perp: 650, E: 1800000, Emin: 950000 },
+      "24F-V8 SP/SP": { Fb: 2400, Fv: 300, Fc_perp: 740, E: 1800000, Emin: 950000 },
+      "20F-V7 DF/DF": { Fb: 2000, Fv: 265, Fc_perp: 560, E: 1600000, Emin: 850000 },
+      "16F-V2 DF/DF": { Fb: 1600, Fv: 265, Fc_perp: 560, E: 1400000, Emin: 740000 },
+      "Custom (enter values)": { Fb: 0, Fv: 0, Fc_perp: 0, E: 0, Emin: 0 }
+    },
+    widths: [3.125, 3.5, 5.125, 5.5, 6.75, 8.75, 10.75],
+    depths: [6.0, 7.5, 9.0, 10.5, 12.0, 13.5, 15.0, 16.5, 18.0, 19.5, 21.0, 24.0]
+  }
+};
+
+// ============================================================================
+// CONNECTION HARDWARE DATABASE
+// ============================================================================
+const HARDWARE = {
+  headerToJack: [
+    { maxReaction: 2000, desc: "Toenail 3-16d per jack stud", code: "IRC R602.3" },
+    { maxReaction: 4000, desc: "Simpson LSC or equivalent strap, each end", code: "Simpson LSC" },
+    { maxReaction: 8000, desc: "Simpson HH header hanger, each end", code: "Simpson HH" },
+    { maxReaction: 99999, desc: "Engineered connection required — consult manufacturer", code: "Per engineer" }
+  ],
+  jackToKing: "Face-nail 10d @ 12\" o.c. (min 3 nails per jack stud)",
+  pliesFastening: "Nail 10d or 16d @ 16\" o.c., staggered, both faces (per NDS/IRC R602.3)",
+  fillerStuds: "Filler studs at 16\" or 24\" o.c. to match wall stud spacing above and below header"
+};
+
+// ============================================================================
+// UI INITIALIZATION
+// ============================================================================
+function init() {
+  populateSpecies();
+  populateDepths();
+  populateEngProducts();
+}
+
+function setMode(mode) {
+  document.querySelectorAll('#modeToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  document.getElementById('ircSection').classList.toggle('hidden', mode !== 'irc');
+  document.getElementById('ndsSection').classList.toggle('hidden', mode !== 'nds');
+}
+
+function getMode() {
+  return document.querySelector('#modeToggle button.active').dataset.mode;
+}
+
+function populateSpecies() {
+  const sel = document.getElementById('species');
+  sel.innerHTML = '';
+  Object.keys(SAWN_SPECIES).forEach(sp => {
+    const opt = document.createElement('option');
+    opt.value = sp;
+    opt.textContent = sp;
+    sel.appendChild(opt);
+  });
+  onSpeciesChange();
+}
+
+function onSpeciesChange() {
+  const sp = document.getElementById('species').value;
+  const sel = document.getElementById('grade');
+  sel.innerHTML = '';
+  if (SAWN_SPECIES[sp]) {
+    Object.keys(SAWN_SPECIES[sp].grades).forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g;
+      opt.textContent = g;
+      if (g === '#2') opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+function onLumberTypeChange() {
+  const lt = document.getElementById('lumberType').value;
+  document.getElementById('sawnOptions').classList.toggle('hidden', lt !== 'sawn');
+  document.getElementById('engOptions').classList.toggle('hidden', lt === 'sawn');
+  if (lt !== 'sawn') {
+    populateEngProducts();
+  }
+  populateDepths();
+  // Update plies default
+  const pliesSel = document.getElementById('plies');
+  if (lt === 'sawn') {
+    pliesSel.value = '2';
+  } else if (['psl','glulam'].includes(lt)) {
+    pliesSel.value = '1';
+  } else {
+    pliesSel.value = '2';
+  }
+}
+
+function populateEngProducts() {
+  const lt = document.getElementById('lumberType').value;
+  if (lt === 'sawn') return;
+  const data = ENGINEERED_LUMBER[lt];
+  if (!data) return;
+
+  const pSel = document.getElementById('engProduct');
+  pSel.innerHTML = '';
+  Object.keys(data.products).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    pSel.appendChild(opt);
+  });
+
+  const wSel = document.getElementById('engWidth');
+  wSel.innerHTML = '';
+  data.widths.forEach(w => {
+    const opt = document.createElement('option');
+    opt.value = w;
+    opt.textContent = w + '"';
+    wSel.appendChild(opt);
+  });
+
+  onEngProductChange();
+}
+
+function onEngProductChange() {
+  populateDepths();
+}
+
+function populateDepths() {
+  const lt = document.getElementById('lumberType').value;
+  const sel = document.getElementById('depth');
+  sel.innerHTML = '';
+
+  if (lt === 'sawn') {
+    [6, 8, 10, 12, 14].forEach(nom => {
+      const act = SAWN_ACTUAL[nom];
+      const opt = document.createElement('option');
+      opt.value = nom;
+      opt.textContent = `2x${nom} (${act.d}")`;
+      if (nom === 10) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } else {
+    const data = ENGINEERED_LUMBER[lt];
+    if (data) {
+      data.depths.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d + '"';
+        if (d === 11.25) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+  }
+}
+
+// ============================================================================
+// NDS CALCULATION ENGINE
+// ============================================================================
+function getSpanInches() {
+  return parseFloat(document.getElementById('spanFt').value) * 12 +
+         parseFloat(document.getElementById('spanIn').value || 0);
+}
+
+function getSpanFt() {
+  return getSpanInches() / 12;
+}
+
+function getMemberProps() {
+  const lt = document.getElementById('lumberType').value;
+  const nPlies = parseInt(document.getElementById('plies').value);
+
+  if (lt === 'sawn') {
+    const sp = document.getElementById('species').value;
+    const gr = document.getElementById('grade').value;
+    const nomDepth = parseInt(document.getElementById('depth').value);
+    const act = SAWN_ACTUAL[nomDepth];
+    const speciesData = SAWN_SPECIES[sp];
+    const gradeData = speciesData.grades[gr];
+
+    // Get Fb — Southern Pine has size-specific values
+    let Fb, Ft;
+    if (gradeData.Fb_bySize) {
+      Fb = gradeData.Fb_bySize[nomDepth] || gradeData.Fb_bySize[12];
+      Ft = gradeData.Ft_bySize ? (gradeData.Ft_bySize[nomDepth] || gradeData.Ft_bySize[12]) : 0;
+    } else {
+      Fb = gradeData.Fb;
+      Ft = gradeData.Ft || 0;
+    }
+
+    // Size factor CF (not for Southern Pine)
+    const CF = speciesData.hasSizeFactor ? (SIZE_FACTORS[nomDepth] || 1.0) : 1.0;
+
+    // Fc (compression parallel) by width — use the nominal depth as key for Fc
+    const Fc = gradeData.Fc ? (gradeData.Fc[nomDepth] || gradeData.Fc[12]) : 0;
+
+    return {
+      type: 'sawn',
+      species: sp,
+      grade: gr,
+      nominalDepth: nomDepth,
+      b: act.b,    // single ply width
+      d: act.d,    // depth
+      nPlies: nPlies,
+      Fb: Fb,
+      Ft: Ft,
+      Fv: gradeData.Fv,
+      Fc_perp: gradeData.Fc_perp,
+      Fc: Fc,
+      E: gradeData.E,
+      Emin: gradeData.Emin,
+      CF: CF,
+      hasSizeFactor: speciesData.hasSizeFactor,
+      isGlulam: false
+    };
+  } else {
+    const data = ENGINEERED_LUMBER[lt];
+    const prodName = document.getElementById('engProduct').value;
+    const prod = data.products[prodName];
+    const w = parseFloat(document.getElementById('engWidth').value);
+    const d = parseFloat(document.getElementById('depth').value);
+
+    return {
+      type: lt,
+      product: prodName,
+      b: w,
+      d: d,
+      nPlies: nPlies,
+      Fb: prod.Fb,
+      Fv: prod.Fv,
+      Fc_perp: prod.Fc_perp,
+      E: prod.E,
+      Emin: prod.Emin,
+      CF: 1.0, // No size factor for engineered lumber (already in published values)
+      hasSizeFactor: false,
+      isGlulam: (lt === 'glulam')
+    };
+  }
+}
+
+function getLoads() {
+  const mode = getMode();
+
+  if (mode === 'irc') {
+    const loadCase = document.getElementById('ircLoadCase').value;
+    const bw = parseFloat(document.getElementById('buildingWidth').value);
+    const eave = parseFloat(document.getElementById('eaveOverhang').value || 0);
+    const tribW_floor = bw / 2; // Floor tributary = building width / 2
+    const tribW_roof = bw / 2 + eave; // Roof tributary includes eave overhang
+    const snowGround = parseFloat(document.getElementById('ircSnow').value);
+    const floorLL = parseFloat(document.getElementById('ircFloorLL').value);
+
+    // Standard IRC residential load assumptions
+    const roofDL = 12;   // psf (roofing + sheathing + framing)
+    const ceilingDL = 5;  // psf
+    const floorDL = 10;   // psf (flooring + sheathing + framing)
+    const wallDL_plf = 7; // plf per linear foot of wall height per floor (approx for 2x4 wall @ 8')
+    const roofLL = 20;    // psf (IRC minimum)
+
+    // Roof snow load (ground snow × 0.7 for flat roof, simplified)
+    const roofSnow = snowGround * 0.7;
+
+    let floorLL_psf = 0;
+    let snowLL_psf = roofSnow;
+    let roofLiveOnly = roofLL;
+
+    if (loadCase === 'oneFloor' || loadCase === 'twoFloor') {
+      floorLL_psf = floorLL;
+    }
+    if (loadCase === 'twoFloor') {
+      floorLL_psf += floorLL; // Both floors contribute live load
+    }
+
+    // Convert to plf on header
+    // Roof/ceiling loads use roof tributary (includes eave overhang)
+    // Floor loads use floor tributary (building width / 2 only)
+    const nFloors = loadCase === 'twoFloor' ? 2 : (loadCase === 'oneFloor' ? 1 : 0);
+    const wDL_roof = (roofDL + ceilingDL) * tribW_roof; // roof+ceiling DL over roof trib
+    const wDL_floor = floorDL * nFloors * tribW_floor;   // floor DL over floor trib
+    const wallStories = nFloors;
+    const wDL_walls = wallStories * 8 * wallDL_plf; // 8 ft wall height per story
+    const wDL_total = wDL_roof + wDL_floor + wDL_walls;
+
+    // Floor live uses floor tributary; roof live and snow use roof tributary
+    const wFloorLL = floorLL_psf * tribW_floor;
+    const wRoofLL = roofLiveOnly * tribW_roof;
+    const wSnow = snowLL_psf * tribW_roof;
+
+    return {
+      mode: 'irc',
+      loadCase: loadCase,
+      buildingWidth: bw,
+      tributaryWidth: tribW_floor,
+      tributaryWidthRoof: tribW_roof,
+      eaveOverhang: eave,
+      wDL: wDL_total,        // plf, total dead
+      wFloorLL: wFloorLL,    // plf, floor live
+      wRoofLL: wRoofLL,      // plf, roof live
+      wSnow: wSnow,          // plf, snow
+      snowGround: snowGround,
+      roofLL: roofLL,
+      floorLL: floorLL,
+      desc: loadCase === 'roof' ? 'Roof & Ceiling Only' :
+            loadCase === 'oneFloor' ? 'One Floor + Roof & Ceiling' :
+            'Two Floors + Roof & Ceiling'
+    };
+  } else {
+    // NDS mode — user-specified loads
+    const tribW = parseFloat(document.getElementById('tribWidth').value);
+    const DL = parseFloat(document.getElementById('ndsDL').value);
+    const floorLL = parseFloat(document.getElementById('ndsLL').value);
+    const roofLL = parseFloat(document.getElementById('ndsRoofLL').value);
+    const snow = parseFloat(document.getElementById('ndsSL').value);
+    const addl = parseFloat(document.getElementById('ndsAddl').value);
+
+    return {
+      mode: 'nds',
+      tributaryWidth: tribW,
+      wDL: DL * tribW + addl,
+      wFloorLL: floorLL * tribW,
+      wRoofLL: roofLL * tribW,
+      wSnow: snow * tribW,
+      snowGround: snow,
+      DL_psf: DL,
+      addl_plf: addl,
+      desc: 'Custom NDS Analysis'
+    };
+  }
+}
+
+function calculate() {
+  const member = getMemberProps();
+  const loads = getLoads();
+  const L_in = getSpanInches();
+  const L_ft = L_in / 12;
+
+  if (L_in <= 0) {
+    alert('Please enter a valid span greater than 0.');
+    return;
+  }
+  if (member.Fb <= 0) {
+    alert('Please select valid material properties (Fb must be > 0). If using Custom, enter values in the product fields.');
+    return;
+  }
+
+  // ---- Section properties ----
+  const n = member.nPlies;
+  const b_total = n * member.b; // Total width
+  const d = member.d;
+  const A = b_total * d;
+  const S = b_total * d * d / 6;
+  const I = b_total * d * d * d / 12;
+
+  // ---- ASD Load Combinations (IBC 1605.3.1) ----
+  // For headers, we check the governing combination
+  const combos = [];
+
+  // Combo 1: D + L (floor live)
+  if (loads.wFloorLL > 0) {
+    combos.push({
+      name: "D + L",
+      w: loads.wDL + loads.wFloorLL,
+      wLive: loads.wFloorLL,
+      CD: 1.0,
+      desc: "Dead + Floor Live"
+    });
+  }
+
+  // Combo 2: D + Lr (roof live only, no floor)
+  if (loads.wRoofLL > 0) {
+    combos.push({
+      name: "D + Lr",
+      w: loads.wDL + loads.wRoofLL,
+      wLive: loads.wRoofLL,
+      CD: 1.15,
+      desc: "Dead + Roof Live"
+    });
+  }
+
+  // Combo 3: D + S (IBC 1605.3.1 Combo 3)
+  if (loads.wSnow > 0) {
+    combos.push({
+      name: "D + S",
+      w: loads.wDL + loads.wSnow,
+      wLive: loads.wSnow,
+      CD: 1.15,
+      desc: "Dead + Snow (NDS C_D = 1.15 for snow)"
+    });
+  }
+
+  // Combo 4: D + 0.75L + 0.75Lr (IBC 1605.3.1 Combo 4)
+  // Per IBC, when both floor live and roof live/snow exist,
+  // they combine only with the 0.75 reduction factor
+  if (loads.wFloorLL > 0 && loads.wRoofLL > 0) {
+    combos.push({
+      name: "D + 0.75L + 0.75Lr",
+      w: loads.wDL + 0.75 * loads.wFloorLL + 0.75 * loads.wRoofLL,
+      wLive: 0.75 * loads.wFloorLL + 0.75 * loads.wRoofLL,
+      CD: 1.15, // NDS 2.3.2.1: CD for shortest duration load in combo (Lr = 7-day = 1.15)
+      desc: "Dead + 0.75(Floor Live) + 0.75(Roof Live) — IBC 1605.3.1(4)"
+    });
+  }
+
+  // Combo 5: D + 0.75L + 0.75S (IBC 1605.3.1 Combo 4 w/ snow)
+  if (loads.wFloorLL > 0 && loads.wSnow > 0) {
+    combos.push({
+      name: "D + 0.75L + 0.75S",
+      w: loads.wDL + 0.75 * loads.wFloorLL + 0.75 * loads.wSnow,
+      wLive: 0.75 * loads.wFloorLL + 0.75 * loads.wSnow,
+      CD: 1.15,
+      desc: "Dead + 0.75(Floor Live) + 0.75(Snow) — IBC 1605.3.1(4)"
+    });
+  }
+
+  // Fallback: D only
+  if (combos.length === 0 || loads.wFloorLL === 0 && loads.wRoofLL === 0 && loads.wSnow === 0) {
+    // Roof-only with just roof live
+    combos.push({
+      name: "D + Lr",
+      w: loads.wDL + loads.wRoofLL,
+      wLive: loads.wRoofLL,
+      CD: 1.15,
+      desc: "Dead + Roof Live"
+    });
+  }
+
+  // ---- CD override ----
+  const cdOverride = document.getElementById('ndsCd').value;
+
+  // ---- Adjustment Factors ----
+  const CM = 1.0;  // Dry service (interior residential)
+  const Ct = 1.0;  // Normal temperature
+  const CL = 1.0;  // Beam stability — header braced by sheathing both faces
+  const Ci = 1.0;  // Non-incised
+  // Cr: NDS 4.3.9 — repetitive member factor applies to joists/rafters/studs at ≤24" o.c.
+  // Built-up headers act as a single structural element, NOT a repetitive system. Cr = 1.0.
+  const Cr = 1.0;
+
+  // Volume factor for glulam (NDS 5.3.6)
+  function getGlulamCV(L_ft_val, d_in, b_in, isSouthernPine) {
+    const x = isSouthernPine ? 20 : 10; // x=20 for SP, x=10 for Western species
+    return Math.pow(5.125 / b_in, 1/x) * Math.pow(12 / d_in, 1/x) * Math.pow(21 / L_ft_val, 1/x);
+  }
+
+  // Depth/volume factor for engineered lumber (LVL, PSL, LSL)
+  // Per manufacturer ESR reports, a depth adjustment applies when depth ≠ reference depth (typically 12")
+  // Standard form: CV = (12/d)^(1/x) where x varies by product type
+  function getEngCV(d_in, lumberType) {
+    if (lumberType === 'lvl')  return Math.pow(12 / d_in, 0.136); // Typical LVL exponent per ICC-ES
+    if (lumberType === 'psl')  return Math.pow(12 / d_in, 0.111); // Typical PSL exponent
+    if (lumberType === 'lsl')  return Math.pow(12 / d_in, 0.143); // Typical LSL exponent
+    return 1.0;
+  }
+
+  // Calculate applicable volume/depth factor
+  let CV = 1.0;
+  const isSPGlulam = member.isGlulam && member.product && member.product.indexOf('SP') !== -1;
+  if (member.isGlulam) {
+    // For glulam: use single member width (not n*b) per NDS 5.3.6
+    CV = getGlulamCV(L_ft, d, member.b, isSPGlulam);
+  } else if (['lvl','psl','lsl'].includes(member.type)) {
+    CV = getEngCV(d, member.type);
+  }
+
+  // NDS 3.4.3.1 — Shear at d from face of support option
+  const useShearReduction = document.getElementById('shearReduction') &&
+                            document.getElementById('shearReduction').checked;
+
+  // ---- Run all combos, find governing ----
+  let govResult = null;
+  let allResults = [];
+
+  combos.forEach(combo => {
+    const CD = (getMode() === 'nds' && cdOverride !== 'auto') ? parseFloat(cdOverride) : combo.CD;
+
+    // Adjusted allowable stresses
+    const CF = member.CF;
+    let Fb_adj = member.Fb * CD * CM * Ct * CL * CF * Cr * Ci;
+
+    // For glulam AND SCL (LVL/PSL/LSL): use lesser of CL or CV, NOT both
+    // NDS 5.3.6 (glulam), NDS 8.3.6 (SCL)
+    if (member.isGlulam || ['lvl','psl','lsl'].includes(member.type)) {
+      const CL_or_CV = Math.min(CL, CV);
+      Fb_adj = member.Fb * CD * CM * Ct * CL_or_CV * Ci;
+    }
+
+    const Fv_adj = member.Fv * CD * CM * Ct * Ci;
+    const Fc_perp_adj = member.Fc_perp * CM * Ct * Ci; // No CD for Fc_perp
+
+    // ---- Design span per NDS 3.2.1 ----
+    // Design span = clear span + 0.5 * bearing length at each end
+    // For initial calc, estimate bearing from max reaction at clear span
+    // then iterate once (bearing is small relative to span)
+    const V_est = combo.w * L_ft / 2;
+    const bearingEst = Math.max(1.5, (V_est / Fc_perp_adj) / b_total);
+    const L_design_ft = L_ft + bearingEst / 12; // NDS 3.2.1: clear + 1/2 bearing each end ≈ + bearing
+    const L_design_in = L_design_ft * 12;
+
+    // Forces (simple span, uniform load, using DESIGN span for bending)
+    const M = combo.w * L_design_ft * L_design_ft / 8; // ft-lbs
+    const M_inlb = M * 12; // in-lbs
+
+    // Support reaction — ALWAYS unreduced, used for bearing and hardware
+    const reaction = combo.w * L_ft / 2; // lbs, max at face of support
+
+    // Design shear for stress check — NDS 3.4.3.1 allows reduction at d from support
+    // but this reduction is ONLY for fv calculation, never for reactions/bearing
+    let V;
+    if (useShearReduction) {
+      const L_shear = L_ft - (2 * d / 12); // clear span minus 2d
+      V = Math.max(0, combo.w * L_shear / 2); // reduced for fv only
+    } else {
+      V = reaction; // conservative: use full reaction
+    }
+
+    // Actual stresses
+    const fb = M_inlb / S;
+    const fv = 3 * V / (2 * A);
+
+    // Utilization
+    const bendUtil = fb / Fb_adj;
+    const shearUtil = fv / Fv_adj;
+
+    // ---- Deflection ----
+    // Per IBC Table 1604.3: serviceability deflection uses UNREDUCED transient loads
+    // Not the 0.75-reduced combo values. Use full individual transient loads.
+    // Find the governing unreduced transient load for this combo type
+    let w_live_unreduced;
+    if (combo.name.indexOf('0.75') !== -1) {
+      // This is a reduced combo — use full unreduced transient loads instead
+      w_live_unreduced = (loads.wFloorLL || 0) + Math.max(loads.wRoofLL || 0, loads.wSnow || 0);
+    } else {
+      w_live_unreduced = combo.wLive;
+    }
+    const w_dead_plf = loads.wDL;
+    const w_total_unreduced = w_dead_plf + w_live_unreduced;
+
+    // Get deflection limits
+    let deflLiveLimit, deflTotalLimit;
+    if (getMode() === 'nds') {
+      deflLiveLimit = parseInt(document.getElementById('ndsDeflLive').value);
+      deflTotalLimit = parseInt(document.getElementById('ndsDeflTotal').value);
+    } else {
+      deflLiveLimit = 360;
+      deflTotalLimit = 240;
+    }
+
+    // Transient (live) deflection — unreduced
+    const w_live_inlb = w_live_unreduced / 12;
+    const defl_live = (5 * w_live_inlb * Math.pow(L_in, 4)) / (384 * member.E * I);
+    const defl_allow_live = L_in / deflLiveLimit;
+
+    // Total deflection with creep per NDS 3.5.2
+    // Δ_total = Kcr × Δ_dead + Δ_live
+    // Kcr = 1.5 for seasoned lumber (dry service), 2.0 for green
+    const Kcr = 1.5;
+    const w_dead_inlb = w_dead_plf / 12;
+    const defl_dead = (5 * w_dead_inlb * Math.pow(L_in, 4)) / (384 * member.E * I);
+    const defl_total = Kcr * defl_dead + defl_live; // NDS 3.5.2 long-term + instantaneous
+    const defl_allow_total = L_in / deflTotalLimit;
+
+    const deflLiveUtil = defl_live / defl_allow_live;
+    const deflTotalUtil = defl_total / defl_allow_total;
+
+    // Bearing check
+    // Bearing uses UNREDUCED reaction, never the reduced shear V
+    const bearingArea_req = reaction / Fc_perp_adj;
+    const bearingLength = bearingArea_req / b_total;
+    const minBearing = Math.max(1.5, bearingLength); // IRC minimum 1.5"
+
+    // Jack studs based on BEARING DEMAND, not span rule of thumb
+    const jackStudsCalc = Math.max(1, Math.ceil(minBearing / 1.5));
+    const providedBearing = jackStudsCalc * 1.5; // inches
+    const bearingUtil = minBearing / providedBearing;
+
+    const result = {
+      combo: combo,
+      CD: CD,
+      Fb_adj: Fb_adj,
+      Fv_adj: Fv_adj,
+      Fc_perp_adj: Fc_perp_adj,
+      L_design_ft: L_design_ft,
+      M: M,
+      V: V,
+      fb: fb,
+      fv: fv,
+      bendUtil: bendUtil,
+      shearUtil: shearUtil,
+      defl_dead: defl_dead,
+      defl_live: defl_live,
+      defl_total: defl_total,
+      defl_allow_live: defl_allow_live,
+      defl_allow_total: defl_allow_total,
+      deflLiveUtil: deflLiveUtil,
+      deflTotalUtil: deflTotalUtil,
+      deflLiveLimit: deflLiveLimit,
+      deflTotalLimit: deflTotalLimit,
+      Kcr: Kcr,
+      reaction: reaction,
+      bearingLength: bearingLength,
+      minBearing: minBearing,
+      jackStudsCalc: jackStudsCalc,
+      providedBearing: providedBearing,
+      bearingUtil: bearingUtil,
+      // ALL FOUR structural checks + bearing must pass
+      pass: bendUtil <= 1.0 && shearUtil <= 1.0 && deflLiveUtil <= 1.0 && deflTotalUtil <= 1.0 && bearingUtil <= 1.0,
+      CV: CV,
+      shearReduced: useShearReduction
+    };
+
+    allResults.push(result);
+
+    // Governing = highest utilization in any check (including bearing)
+    const maxUtil = Math.max(bendUtil, shearUtil, deflLiveUtil, deflTotalUtil, bearingUtil);
+    if (!govResult || maxUtil > Math.max(govResult.bendUtil, govResult.shearUtil, govResult.deflLiveUtil, govResult.deflTotalUtil, govResult.bearingUtil)) {
+      govResult = result;
+    }
+  });
+
+  // ---- Determine jack/king studs from GOVERNING bearing demand ----
+  const maxReaction = Math.max(...allResults.map(r => r.reaction));
+  // Jack studs determined by bearing demand, not span rule of thumb
+  const jackStuds = govResult ? govResult.jackStudsCalc : 1;
+  const hw = getHardware(maxReaction);
+
+  // ---- Render results ----
+  // Store for PDF generation
+  lastCalcData = { member, loads, gov: govResult, allResults, jackStuds, hw, L_ft, L_in };
+
+  renderResults(member, loads, govResult, allResults, jackStuds, hw, L_ft, L_in);
+}
+
+function getHardware(reaction) {
+  for (let hw of HARDWARE.headerToJack) {
+    if (reaction <= hw.maxReaction) return hw;
+  }
+  return HARDWARE.headerToJack[HARDWARE.headerToJack.length - 1];
+}
+
+// ============================================================================
+// RENDER RESULTS
+// ============================================================================
+function renderResults(member, loads, gov, allResults, jackStuds, hw, L_ft, L_in) {
+  document.getElementById('emptyState').classList.add('hidden');
+  const container = document.getElementById('results');
+  container.classList.remove('hidden');
+  const isSPGlulam = member.isGlulam && member.product && member.product.indexOf('SP') !== -1;
+
+  const overallPass = gov.pass;
+  const maxUtil = Math.max(gov.bendUtil, gov.shearUtil, gov.deflLiveUtil, gov.deflTotalUtil);
+
+  // Member description
+  let memberDesc;
+  if (member.type === 'sawn') {
+    memberDesc = `${member.nPlies}-2x${member.nominalDepth} ${member.species} ${member.grade}`;
+  } else {
+    memberDesc = `${member.nPlies > 1 ? member.nPlies + '-' : ''}${member.b}"x${member.d}" ${member.product || ENGINEERED_LUMBER[member.type].name}`;
+  }
+
+  const spanStr = `${Math.floor(L_in/12)}'-${(L_in%12).toFixed(0)}"`;
+
+  container.innerHTML = `
+    <!-- STATUS -->
+    <div class="status-banner ${overallPass ? 'status-pass' : 'status-fail'}">
+      ${overallPass ? '&#10003; ADEQUATE' : '&#10007; INADEQUATE'} &mdash; ${memberDesc}
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="result-card">
+      <h3>Header Summary</h3>
+      <table class="spec-table">
+        <tr><th style="width:40%">Parameter</th><th>Value</th></tr>
+        <tr><td>Clear Span</td><td><strong>${spanStr} (${L_ft.toFixed(2)} ft)</strong></td></tr>
+        <tr><td>Design Span (NDS 3.2.1)</td><td>${gov.L_design_ft.toFixed(2)} ft (clear + bearing/2 each end)</td></tr>
+        <tr><td>Header Assembly</td><td><strong>${memberDesc}</strong></td></tr>
+        <tr><td>Total Width &times; Depth</td><td>${(member.b * member.nPlies).toFixed(2)}" &times; ${member.d}"</td></tr>
+        <tr><td>Section Modulus (S)</td><td>${(member.b * member.nPlies * member.d * member.d / 6).toFixed(2)} in&sup3;</td></tr>
+        <tr><td>Moment of Inertia (I)</td><td>${(member.b * member.nPlies * member.d * member.d * member.d / 12).toFixed(2)} in&sup4;</td></tr>
+        <tr><td>Load Condition</td><td>${loads.desc}</td></tr>
+        <tr><td>Governing Combo</td><td>${gov.combo.name} (C<sub>D</sub> = ${gov.CD.toFixed(2)})</td></tr>
+        <tr><td>Total Uniform Load</td><td>${gov.combo.w.toFixed(0)} plf</td></tr>
+        <tr><td>Max Reaction (each end)</td><td>${gov.reaction.toFixed(0)} lbs</td></tr>
+      </table>
+    </div>
+
+    <!-- STRUCTURAL CHECKS -->
+    <div class="result-card">
+      <h3>Structural Adequacy Checks</h3>
+      ${renderCheck('Bending', `f<sub>b</sub> = ${gov.fb.toFixed(0)} psi`, `F'<sub>b</sub> = ${gov.Fb_adj.toFixed(0)} psi`, gov.bendUtil)}
+      ${renderCheck(`Shear${gov.shearReduced ? ' (at d from support)' : ''}`, `f<sub>v</sub> = ${gov.fv.toFixed(0)} psi`, `F'<sub>v</sub> = ${gov.Fv_adj.toFixed(0)} psi`, gov.shearUtil)}
+      ${renderCheck(`Deflection (L/${gov.deflLiveLimit} transient)`, `&Delta;<sub>transient</sub> = ${gov.defl_live.toFixed(3)}"`, `&Delta;<sub>allow</sub> = ${gov.defl_allow_live.toFixed(3)}"`, gov.deflLiveUtil)}
+      ${renderCheck(`Deflection (L/${gov.deflTotalLimit} total, K<sub>cr</sub>=${gov.Kcr})`, `&Delta;<sub>total</sub> = ${gov.defl_total.toFixed(3)}"`, `&Delta;<sub>allow</sub> = ${gov.defl_allow_total.toFixed(3)}"`, gov.deflTotalUtil)}
+      ${renderCheck('Bearing', `Required: ${gov.minBearing.toFixed(2)}"`, `Provided: ${gov.providedBearing.toFixed(2)}" (${gov.jackStudsCalc} jack × 1.5")`, gov.bearingUtil)}
+    </div>
+
+    <!-- ADJUSTED DESIGN VALUES -->
+    <div class="result-card">
+      <h3>NDS Adjusted Design Values</h3>
+      <table class="spec-table">
+        <tr><th>Property</th><th>Reference</th><th>Adj. Factors</th><th>Adjusted</th></tr>
+        <tr>
+          <td>F<sub>b</sub> (bending)</td>
+          <td>${member.Fb} psi</td>
+          <td>C<sub>D</sub>=${gov.CD}${member.CF !== 1.0 ? ', C<sub>F</sub>=' + member.CF : ''}${gov.CV !== 1.0 ? ', C<sub>V</sub>=' + gov.CV.toFixed(3) : ''}</td>
+          <td><strong>${gov.Fb_adj.toFixed(0)} psi</strong></td>
+        </tr>
+        <tr>
+          <td>F<sub>v</sub> (shear)</td>
+          <td>${member.Fv} psi</td>
+          <td>C<sub>D</sub>=${gov.CD}</td>
+          <td><strong>${gov.Fv_adj.toFixed(0)} psi</strong></td>
+        </tr>
+        <tr>
+          <td>F<sub>c&perp;</sub> (bearing)</td>
+          <td>${member.Fc_perp} psi</td>
+          <td>(no C<sub>D</sub>)</td>
+          <td><strong>${gov.Fc_perp_adj.toFixed(0)} psi</strong></td>
+        </tr>
+        <tr>
+          <td>E (modulus)</td>
+          <td colspan="2">&mdash;</td>
+          <td><strong>${(member.E/1000000).toFixed(2)} &times; 10&sup6; psi</strong></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- BEARING & FRAMING -->
+    <div class="result-card">
+      <h3>Bearing &amp; Framing Requirements</h3>
+      <table class="spec-table">
+        <tr><th style="width:40%">Item</th><th>Requirement</th></tr>
+        <tr><td>Required Bearing Length</td><td><strong>${gov.minBearing.toFixed(2)}" each end</strong> (calc'd: ${gov.bearingLength.toFixed(2)}", IRC min: 1.5")</td></tr>
+        <tr><td>Provided Bearing</td><td><strong>${gov.providedBearing.toFixed(2)}"</strong> (${gov.jackStudsCalc} jack stud${gov.jackStudsCalc > 1 ? 's' : ''} &times; 1.5")</td></tr>
+        <tr><td>Jack Studs (each side)</td><td><strong>${gov.jackStudsCalc}</strong> (based on bearing demand)</td></tr>
+        <tr><td>King Studs (each side)</td><td><strong>1</strong> (full height)</td></tr>
+        <tr><td>Jack-to-King Connection</td><td>${HARDWARE.jackToKing}</td></tr>
+        <tr><td>Header-to-Support</td><td>${hw.desc} (${hw.code})</td></tr>
+        <tr><td>Ply Fastening</td><td>${HARDWARE.pliesFastening}</td></tr>
+        <tr><td>Filler Studs</td><td>${HARDWARE.fillerStuds}</td></tr>
+      </table>
+    </div>
+
+    <!-- LOAD COMBINATION TABLE -->
+    <div class="result-card">
+      <h3>Load Combination Analysis</h3>
+      <table class="spec-table">
+        <tr><th>Combo</th><th>w (plf)</th><th>M (ft-lb)</th><th>V (lb)</th><th>C<sub>D</sub></th><th>Bend %</th><th>Shear %</th><th>Status</th></tr>
+        ${allResults.map(r => `
+          <tr>
+            <td>${r.combo.name}</td>
+            <td>${r.combo.w.toFixed(0)}</td>
+            <td>${r.M.toFixed(0)}</td>
+            <td>${r.V.toFixed(0)}</td>
+            <td>${r.CD.toFixed(2)}</td>
+            <td class="${r.bendUtil > 1 ? 'check-fail' : 'check-pass'}">${(r.bendUtil*100).toFixed(1)}%</td>
+            <td class="${r.shearUtil > 1 ? 'check-fail' : 'check-pass'}">${(r.shearUtil*100).toFixed(1)}%</td>
+            <td>${r.pass ? '<span class="check-pass">OK</span>' : '<span class="check-fail">NG</span>'}</td>
+          </tr>
+        `).join('')}
+      </table>
+    </div>
+
+    <!-- HEADER DIAGRAM -->
+    <div class="result-card">
+      <h3>Header Detail</h3>
+      <div class="header-diagram">
+        ${renderHeaderDiagram(member, jackStuds, L_ft)}
+      </div>
+    </div>
+
+    <!-- CODE REFERENCES -->
+    <div class="result-card">
+      <h3>Applicable Code References</h3>
+      <table class="spec-table">
+        <tr><td>Design Standard</td><td>NDS-2018 (National Design Specification for Wood Construction)</td></tr>
+        <tr><td>Building Code</td><td>IRC 2021 / IBC 2021</td></tr>
+        <tr><td>Headers</td><td>IRC R602.7, R602.7.1, R602.7.2, R602.7.5</td></tr>
+        <tr><td>Bearing</td><td>NDS 3.10 (Compression Perpendicular to Grain)</td></tr>
+        <tr><td>Framing</td><td>IRC Table R602.3(1) — Fastening Schedule</td></tr>
+        <tr><td>Load Combinations</td><td>IBC 1605.3.1 (ASD)</td></tr>
+        ${member.type !== 'sawn' ? '<tr><td>Engineered Lumber</td><td>Manufacturer ESR/ICC-ES report governs published values</td></tr>' : ''}
+      </table>
+    </div>
+
+    <!-- PE STAMP BLOCK -->
+    <div class="result-card">
+      <h3>Professional Engineer Certification</h3>
+      <div class="stamp-block">
+        <div class="stamp-title">PE Seal &amp; Signature</div>
+        <div style="margin-top:40px; font-size:12px; color:#999;">
+          Prepared by: _______________________________<br><br>
+          License No: _____________ State: ___________<br><br>
+          Date: _______________ Signature: ___________
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="result-card">
+      <h3>Notes &amp; Assumptions</h3>
+      <ol class="notes-list">
+        <li>Design span per NDS 3.2.1: clear span plus one-half required bearing at each end.</li>
+        <li>Simple span, uniform load, adequate lateral bracing assumed (C<sub>L</sub> = 1.0).</li>
+        <li>Dry service conditions (C<sub>M</sub> = 1.0), normal temperature (C<sub>t</sub> = 1.0).</li>
+        ${member.type === 'sawn' && member.hasSizeFactor ? `<li>Size factor C<sub>F</sub> = ${member.CF} applied per NDS Supplement Table 4A.</li>` : ''}
+        <li>C<sub>r</sub> = 1.0. Built-up headers do not qualify as repetitive members per NDS 4.3.9.</li>
+        ${member.isGlulam ? `<li>C<sub>V</sub> = ${gov.CV.toFixed(3)} per NDS 5.3.6 (x=${isSPGlulam ? '20 SP' : '10 Western'}). Lesser of C<sub>L</sub> or C<sub>V</sub> used, not both.</li>` : ''}
+        ${['lvl','psl','lsl'].includes(member.type) ? `<li>C<sub>V</sub> = ${gov.CV.toFixed(3)} per NDS 8.3.6 (ref. depth=12"). Lesser of C<sub>L</sub> or C<sub>V</sub> used, not both. VERIFY exponent against ICC-ES/ESR report.</li>` : ''}
+        ${member.type !== 'sawn' ? '<li>Engineered lumber values are generic/typical. VERIFY against manufacturer\'s published ESR report.</li>' : ''}
+        <li>Transient deflection per IBC Table 1604.3 uses UNREDUCED individual transient loads (not 0.75-factored combo values).</li>
+        <li>Total deflection includes creep per NDS 3.5.2: &Delta;<sub>total</sub> = K<sub>cr</sub>&times;&Delta;<sub>dead</sub> + &Delta;<sub>transient</sub>, K<sub>cr</sub> = ${gov.Kcr} (seasoned/dry).</li>
+        <li>Bearing per NDS 3.10. Jack stud count = ceil(required bearing / 1.5"). IRC min bearing = 1.5".</li>
+        <li>Bearing adequacy included in pass/fail determination.</li>
+        <li>Point loads, eccentric loading, notching, and lateral/wind/seismic not considered.</li>
+        <li>Local code amendments and jurisdictional requirements may supersede this analysis.</li>
+      </ol>
+    </div>
+
+    <!-- DOWNLOAD PDF BUTTON -->
+    <div style="text-align:right; margin-top:16px;">
+      <button class="btn-print" onclick="printSpecSheet()">&#128196; Download Spec Sheet (PDF)</button>
+      <button class="btn-print" style="background:#666;" onclick="window.print()">&#128424; Print to PDF</button>
+    </div>
+  `;
+}
+
+function renderCheck(label, actual, allowable, utilization) {
+  const pct = (utilization * 100).toFixed(1);
+  const pass = utilization <= 1.0;
+  const warn = utilization > 0.9 && utilization <= 1.0;
+  const cls = !pass ? 'check-fail' : warn ? 'check-warn' : 'check-pass';
+  const barCls = !pass ? 'util-fail' : warn ? 'util-warn' : 'util-ok';
+  const barPct = Math.min(utilization * 100, 100);
+
+  return `
+    <div class="check-row" style="display:block; padding:10px 0;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="check-label">${label}</span>
+        <span class="check-value ${cls}">${pct}% ${pass ? '&#10003;' : '&#10007;'}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:11px; color:#888; margin-top:2px;">
+        <span>${actual}</span>
+        <span>${allowable}</span>
+      </div>
+      <div class="utilization-bar">
+        <div class="utilization-fill ${barCls}" style="width:${barPct}%"></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderHeaderDiagram(member, jackStuds, spanFt) {
+  const w = 500, h = 280;
+  const margin = 40;
+  const headerTop = 60;
+  const headerH = 50;
+  const studW = 14;
+  const spanPx = w - 2 * margin - 2 * studW * (jackStuds + 1);
+  const kingH = 200;
+
+  let svg = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" style="font-family: sans-serif; font-size: 10px;">`;
+
+  // Top plate
+  svg += `<rect x="${margin}" y="${headerTop - 20}" width="${w - 2*margin}" height="18" fill="#ddd" stroke="#666" stroke-width="1"/>`;
+  svg += `<text x="${w/2}" y="${headerTop - 8}" text-anchor="middle" font-size="9" fill="#666">TOP PLATE(S)</text>`;
+
+  const leftStart = margin;
+  const rightEnd = w - margin;
+
+  // King studs
+  svg += `<rect x="${leftStart}" y="${headerTop}" width="${studW}" height="${kingH}" fill="#c8a87c" stroke="#8B6914" stroke-width="1"/>`;
+  svg += `<rect x="${rightEnd - studW}" y="${headerTop}" width="${studW}" height="${kingH}" fill="#c8a87c" stroke="#8B6914" stroke-width="1"/>`;
+
+  // Jack studs
+  for (let j = 0; j < jackStuds; j++) {
+    const lx = leftStart + studW + j * studW;
+    const rx = rightEnd - studW - (j + 1) * studW;
+    const jH = kingH - 2; // slightly shorter than king
+    svg += `<rect x="${lx}" y="${headerTop}" width="${studW}" height="${jH}" fill="#d4a753" stroke="#8B6914" stroke-width="1"/>`;
+    svg += `<rect x="${rx}" y="${headerTop}" width="${studW}" height="${jH}" fill="#d4a753" stroke="#8B6914" stroke-width="1"/>`;
+  }
+
+  // Header
+  const hdrLeft = leftStart + studW * (jackStuds);
+  const hdrRight = rightEnd - studW * (jackStuds);
+  const hdrW = hdrRight - hdrLeft;
+  svg += `<rect x="${hdrLeft}" y="${headerTop}" width="${hdrW}" height="${headerH}" fill="#b8860b" stroke="#8B6914" stroke-width="2"/>`;
+
+  // Header label
+  let memberLabel;
+  if (member.type === 'sawn') {
+    memberLabel = `${member.nPlies}-2x${member.nominalDepth}`;
+  } else {
+    memberLabel = `${member.nPlies > 1 ? member.nPlies + '-' : ''}${member.b}"x${member.d}" ${member.type.toUpperCase()}`;
+  }
+  svg += `<text x="${w/2}" y="${headerTop + headerH/2 + 4}" text-anchor="middle" font-weight="bold" font-size="11" fill="#fff">${memberLabel}</text>`;
+
+  // Filler studs below sill / above header
+  const fillerTop = headerTop + headerH;
+  const fillerH = kingH - headerH;
+  for (let i = 1; i <= 2; i++) {
+    const cx = hdrLeft + (hdrW / 3) * i - studW / 2;
+    svg += `<rect x="${cx}" y="${fillerTop}" width="${studW}" height="${fillerH}" fill="#e8d4a0" stroke="#8B6914" stroke-width="0.5" stroke-dasharray="3,2"/>`;
+  }
+
+  // Bottom plate
+  svg += `<rect x="${margin}" y="${headerTop + kingH + 2}" width="${w - 2*margin}" height="18" fill="#ddd" stroke="#666" stroke-width="1"/>`;
+  svg += `<text x="${w/2}" y="${headerTop + kingH + 14}" text-anchor="middle" font-size="9" fill="#666">BOTTOM PLATE</text>`;
+
+  // Dimension line — span
+  const dimY = headerTop + headerH + 40;
+  svg += `<line x1="${hdrLeft}" y1="${dimY}" x2="${hdrRight}" y2="${dimY}" stroke="#333" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"/>`;
+  svg += `<text x="${w/2}" y="${dimY - 5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">${spanFt.toFixed(1)} ft clear span</text>`;
+
+  // Labels
+  svg += `<text x="${leftStart + studW/2}" y="${headerTop + kingH - 5}" text-anchor="middle" font-size="8" fill="#333">KING</text>`;
+  svg += `<text x="${leftStart + studW + studW/2}" y="${headerTop + kingH - 15}" text-anchor="middle" font-size="8" fill="#333">JACK</text>`;
+  svg += `<text x="${hdrLeft + hdrW/3 - 2}" y="${fillerTop + fillerH - 5}" text-anchor="middle" font-size="8" fill="#999">FILLER</text>`;
+
+  // Arrow marker definition
+  svg += `<defs><marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker></defs>`;
+
+  svg += '</svg>';
+  return svg;
+}
+
+// ============================================================================
+// STORE LAST CALC FOR PDF
+// ============================================================================
+let lastCalcData = null;
+
+// ============================================================================
+// PDF SPEC SHEET GENERATOR
+// ============================================================================
+function printSpecSheet() {
+  if (!lastCalcData) {
+    alert('Please run a calculation first.');
+    return;
+  }
+  // Check if jsPDF loaded
+  if (typeof window.jspdf === 'undefined') {
+    // Try dynamic load as fallback
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
+    s.onload = function() { generatePDF(lastCalcData); };
+    s.onerror = function() {
+      alert('Could not load the PDF library (jsPDF). This usually happens when:\n\n' +
+            '1. Opening the file directly (file://) — try using a local server instead:\n' +
+            '   python3 -m http.server 8000\n' +
+            '   then open http://localhost:8000/header-calc.html\n\n' +
+            '2. No internet connection — jsPDF loads from a CDN.\n\n' +
+            'As a workaround, you can use Ctrl+P / Cmd+P to print to PDF.');
+    };
+    document.head.appendChild(s);
+    return;
+  }
+  generatePDF(lastCalcData);
+}
+
+function generatePDF(data) {
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) {
+    alert('PDF library failed to initialize. See console for details.');
+    return;
+  }
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+
+  const { member, loads, gov, allResults, jackStuds, hw, L_ft, L_in } = data;
+
+  const pageW = 612;
+  const pageH = 792;
+  const marginL = 50;
+  const marginR = 50;
+  const contentW = pageW - marginL - marginR;
+  let y = 50;
+
+  // Colors
+  const navy = [26, 39, 68];
+  const blue = [59, 108, 181];
+  const green = [46, 125, 50];
+  const red = [198, 40, 40];
+  const gray = [100, 100, 100];
+  const black = [33, 33, 33];
+  const lightGray = [200, 200, 200];
+
+  // --- Helper functions ---
+  function setColor(rgb) { doc.setTextColor(rgb[0], rgb[1], rgb[2]); }
+  function setDrawColor(rgb) { doc.setDrawColor(rgb[0], rgb[1], rgb[2]); }
+
+  function addPage() {
+    doc.addPage();
+    y = 50;
+    // Repeat header line on continuation pages
+    setDrawColor(navy);
+    doc.setLineWidth(1.5);
+    doc.line(marginL, y - 5, pageW - marginR, y - 5);
+    setColor(gray);
+    doc.setFontSize(8);
+    doc.text('OASIS ENGINEERING — Header Sizing Analysis (continued)', marginL, y + 8);
+    y += 25;
+  }
+
+  function checkPageSpace(needed) {
+    if (y + needed > pageH - 60) addPage();
+  }
+
+  function sectionTitle(title) {
+    checkPageSpace(30);
+    y += 8;
+    setDrawColor(navy);
+    doc.setLineWidth(1.5);
+    doc.line(marginL, y, pageW - marginR, y);
+    y += 14;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    setColor(navy);
+    doc.text(title.toUpperCase(), marginL, y);
+    y += 14;
+  }
+
+  function tableRow(label, value, indent) {
+    checkPageSpace(14);
+    const x = marginL + (indent || 0);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    setColor(gray);
+    doc.text(label, x, y);
+    doc.setFont('helvetica', 'bold');
+    setColor(black);
+    doc.text(String(value), marginL + 260, y);
+    y += 13;
+  }
+
+  function tableRowThreeCol(c1, c2, c3) {
+    checkPageSpace(14);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    setColor(black);
+    doc.text(String(c1), marginL, y);
+    doc.text(String(c2), marginL + 200, y);
+    doc.text(String(c3), marginL + 380, y);
+    y += 13;
+  }
+
+  function checkRow(label, actual, allowable, utilization) {
+    checkPageSpace(16);
+    const pct = (utilization * 100).toFixed(1);
+    const pass = utilization <= 1.0;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    setColor(black);
+    doc.text(label, marginL, y);
+    doc.text(actual, marginL + 180, y);
+    doc.text(allowable, marginL + 320, y);
+    doc.setFont('helvetica', 'bold');
+    setColor(pass ? green : red);
+    doc.text(pct + '%  ' + (pass ? 'OK' : 'NG'), marginL + 450, y);
+    y += 5;
+    // Utilization bar
+    const barX = marginL;
+    const barW = contentW;
+    const barH = 4;
+    doc.setFillColor(230, 230, 230);
+    doc.rect(barX, y, barW, barH, 'F');
+    const fillW = Math.min(utilization, 1.0) * barW;
+    if (pass) { doc.setFillColor(green[0], green[1], green[2]); }
+    else { doc.setFillColor(red[0], red[1], red[2]); }
+    doc.rect(barX, y, fillW, barH, 'F');
+    y += 12;
+  }
+
+  // ===== LETTERHEAD =====
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  setColor(navy);
+  doc.text('OASIS ENGINEERING', marginL, y);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  setColor(gray);
+  doc.text('Structural Engineering & Design Services', marginL, y + 13);
+
+  // Right side: doc info
+  const refNum = 'HDR-' + Date.now().toString(36).toUpperCase();
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  setColor(gray);
+  const rightX = pageW - marginR;
+  doc.text('Residential Header Sizing — Structural Analysis', rightX, y, { align: 'right' });
+  doc.text('NDS 2018 / IRC 2021 — Allowable Stress Design (ASD)', rightX, y + 10, { align: 'right' });
+  doc.text('Date: ' + new Date().toLocaleDateString() + '  |  Ref: ' + refNum, rightX, y + 20, { align: 'right' });
+
+  y += 30;
+  setDrawColor(navy);
+  doc.setLineWidth(2.5);
+  doc.line(marginL, y, pageW - marginR, y);
+  y += 20;
+
+  // ===== STATUS BANNER =====
+  const overallPass = gov.pass;
+  let memberDesc;
+  if (member.type === 'sawn') {
+    memberDesc = member.nPlies + '-2x' + member.nominalDepth + ' ' + member.species + ' ' + member.grade;
+  } else {
+    memberDesc = (member.nPlies > 1 ? member.nPlies + '-' : '') + member.b + '"x' + member.d + '" ' + (member.product || member.type.toUpperCase());
+  }
+
+  const bannerH = 28;
+  if (overallPass) {
+    doc.setFillColor(232, 245, 233);
+    setDrawColor(green);
+  } else {
+    doc.setFillColor(255, 235, 238);
+    setDrawColor(red);
+  }
+  doc.setLineWidth(1.5);
+  doc.roundedRect(marginL, y, contentW, bannerH, 3, 3, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  setColor(overallPass ? green : red);
+  const statusText = (overallPass ? 'ADEQUATE' : 'INADEQUATE') + ' — ' + memberDesc;
+  doc.text(statusText, pageW / 2, y + 18, { align: 'center' });
+  y += bannerH + 10;
+
+  // ===== HEADER SUMMARY =====
+  sectionTitle('Header Summary');
+  const spanStr = Math.floor(L_in/12) + "'-" + (L_in%12).toFixed(0) + '"';
+  tableRow('Clear Span', spanStr + ' (' + L_ft.toFixed(2) + ' ft)');
+  tableRow('Design Span (NDS 3.2.1)', gov.L_design_ft.toFixed(2) + ' ft');
+  tableRow('Header Assembly', memberDesc);
+  tableRow('Total Width x Depth', (member.b * member.nPlies).toFixed(2) + '" x ' + member.d + '"');
+  const S_val = (member.b * member.nPlies * member.d * member.d / 6).toFixed(2);
+  const I_val = (member.b * member.nPlies * member.d * member.d * member.d / 12).toFixed(2);
+  tableRow('Section Modulus (S)', S_val + ' in³');
+  tableRow('Moment of Inertia (I)', I_val + ' in⁴');
+  tableRow('Load Condition', loads.desc);
+  tableRow('Governing Combo', gov.combo.name + ' (CD = ' + gov.CD.toFixed(2) + ')');
+  tableRow('Total Uniform Load', gov.combo.w.toFixed(0) + ' plf');
+  tableRow('Max Reaction (each end)', gov.reaction.toFixed(0) + ' lbs');
+
+  // ===== STRUCTURAL CHECKS =====
+  sectionTitle('Structural Adequacy Checks');
+
+  // Column headers
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  setColor(gray);
+  doc.text('CHECK', marginL, y);
+  doc.text('ACTUAL', marginL + 180, y);
+  doc.text('ALLOWABLE', marginL + 320, y);
+  doc.text('UTIL.', marginL + 450, y);
+  y += 12;
+
+  checkRow('Bending',
+    'fb = ' + gov.fb.toFixed(0) + ' psi',
+    "F'b = " + gov.Fb_adj.toFixed(0) + ' psi',
+    gov.bendUtil);
+  checkRow('Shear' + (gov.shearReduced ? ' (at d from support)' : ''),
+    'fv = ' + gov.fv.toFixed(0) + ' psi',
+    "F'v = " + gov.Fv_adj.toFixed(0) + ' psi',
+    gov.shearUtil);
+  checkRow('Deflection (L/' + gov.deflLiveLimit + ' transient)',
+    'Δ_trans = ' + gov.defl_live.toFixed(3) + '"',
+    'Δ_allow = ' + gov.defl_allow_live.toFixed(3) + '"',
+    gov.deflLiveUtil);
+  checkRow('Deflection (L/' + gov.deflTotalLimit + ' total, Kcr=' + gov.Kcr + ')',
+    'Δ_total = ' + gov.defl_total.toFixed(3) + '"',
+    'Δ_allow = ' + gov.defl_allow_total.toFixed(3) + '"',
+    gov.deflTotalUtil);
+  checkRow('Bearing',
+    'Required: ' + gov.minBearing.toFixed(2) + '"',
+    'Provided: ' + gov.providedBearing.toFixed(2) + '" (' + gov.jackStudsCalc + ' jack x 1.5")',
+    gov.bearingUtil);
+
+  // ===== ADJUSTED DESIGN VALUES =====
+  sectionTitle('NDS Adjusted Design Values');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  setColor(gray);
+  doc.text('PROPERTY', marginL, y);
+  doc.text('REFERENCE', marginL + 150, y);
+  doc.text('FACTORS', marginL + 260, y);
+  doc.text('ADJUSTED', marginL + 420, y);
+  y += 12;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  setColor(black);
+
+  let fbFactors = 'CD=' + gov.CD;
+  if (member.CF !== 1.0) fbFactors += ', CF=' + member.CF;
+  if (gov.CV !== 1.0) fbFactors += ', CV=' + gov.CV.toFixed(3);
+
+  function dvRow(prop, ref, factors, adj) {
+    checkPageSpace(14);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    setColor(black);
+    doc.text(prop, marginL, y);
+    doc.text(ref, marginL + 150, y);
+    doc.setFontSize(8);
+    setColor(gray);
+    doc.text(factors, marginL + 260, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    setColor(black);
+    doc.text(adj, marginL + 420, y);
+    y += 13;
+  }
+
+  dvRow('Fb (bending)', member.Fb + ' psi', fbFactors, gov.Fb_adj.toFixed(0) + ' psi');
+  dvRow('Fv (shear)', member.Fv + ' psi', 'CD=' + gov.CD, gov.Fv_adj.toFixed(0) + ' psi');
+  dvRow('Fc⊥ (bearing)', member.Fc_perp + ' psi', '(no CD)', gov.Fc_perp_adj.toFixed(0) + ' psi');
+  dvRow('E (modulus)', '', '—', (member.E/1000000).toFixed(2) + ' x 10⁶ psi');
+
+  // ===== BEARING & FRAMING =====
+  sectionTitle('Bearing & Framing Requirements');
+  tableRow('Required Bearing', gov.minBearing.toFixed(2) + '" each end');
+  tableRow('Provided Bearing', gov.providedBearing.toFixed(2) + '" (' + gov.jackStudsCalc + ' jack x 1.5")');
+  tableRow('Jack Studs (each side)', gov.jackStudsCalc + ' (bearing demand)');
+  tableRow('King Studs (each side)', '1 (full height)');
+  tableRow('Jack-to-King Connection', 'Face-nail 10d @ 12" o.c.');
+  tableRow('Header-to-Support', hw.desc);
+  tableRow('Ply Fastening', '10d or 16d @ 16" o.c., staggered');
+  tableRow('Filler Studs', 'At wall stud spacing, above & below');
+
+  // ===== LOAD COMBINATION TABLE =====
+  sectionTitle('Load Combination Analysis');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  setColor(gray);
+  const cols = [marginL, marginL+90, marginL+155, marginL+215, marginL+265, marginL+325, marginL+385, marginL+445];
+  ['COMBO','w (plf)','M (ft-lb)','V (lb)','CD','BEND %','SHEAR %','STATUS'].forEach((h,i) => {
+    doc.text(h, cols[i], y);
+  });
+  y += 10;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  allResults.forEach(r => {
+    checkPageSpace(14);
+    setColor(black);
+    doc.text(r.combo.name, cols[0], y);
+    doc.text(r.combo.w.toFixed(0), cols[1], y);
+    doc.text(r.M.toFixed(0), cols[2], y);
+    doc.text(r.V.toFixed(0), cols[3], y);
+    doc.text(r.CD.toFixed(2), cols[4], y);
+
+    setColor(r.bendUtil > 1 ? red : green);
+    doc.text((r.bendUtil*100).toFixed(1) + '%', cols[5], y);
+
+    setColor(r.shearUtil > 1 ? red : green);
+    doc.text((r.shearUtil*100).toFixed(1) + '%', cols[6], y);
+
+    doc.setFont('helvetica', 'bold');
+    setColor(r.pass ? green : red);
+    doc.text(r.pass ? 'OK' : 'NG', cols[7], y);
+    doc.setFont('helvetica', 'normal');
+    y += 12;
+  });
+
+  // ===== CODE REFERENCES =====
+  sectionTitle('Applicable Code References');
+  tableRow('Design Standard', 'NDS-2018 (National Design Specification)');
+  tableRow('Building Code', 'IRC 2021 / IBC 2021');
+  tableRow('Headers', 'IRC R602.7, R602.7.1, R602.7.2, R602.7.5');
+  tableRow('Bearing', 'NDS 3.10 (Compression Perp. to Grain)');
+  tableRow('Framing', 'IRC Table R602.3(1) — Fastening Schedule');
+  tableRow('Load Combinations', 'IBC 1605.3.1 (ASD)');
+  if (member.type !== 'sawn') {
+    tableRow('Engineered Lumber', "Manufacturer ESR/ICC-ES report governs");
+  }
+
+  // ===== NOTES =====
+  sectionTitle('Notes & Assumptions');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  setColor(gray);
+
+  const notes = [
+    'Design span per NDS 3.2.1: clear span + half bearing length each end.',
+    'Simple span, uniform load, adequate lateral bracing (CL = 1.0).',
+    'Dry service (CM = 1.0), normal temperature (Ct = 1.0).',
+    'Cr = 1.0 — built-up headers are not repetitive members per NDS 4.3.9.',
+    'Transient deflection uses UNREDUCED loads per IBC Table 1604.3.',
+    'Total deflection incl. creep: Kcr=' + gov.Kcr + ' x dead + transient (NDS 3.5.2).',
+    'Bearing in pass/fail. Jack studs = ceil(bearing demand / 1.5").',
+    'Point loads, eccentric loading, notching, lateral/wind/seismic not considered.',
+    'Local code amendments and jurisdictional requirements may supersede.',
+  ];
+  if (member.type !== 'sawn') {
+    notes.push('Engineered lumber values are generic. VERIFY against manufacturer ESR report.');
+  }
+  if (gov.CV !== 1.0) {
+    const cvNote = member.isGlulam ?
+      'CV = ' + gov.CV.toFixed(3) + ' per NDS 5.3.6. Lesser of CL or CV used, not both.' :
+      'CV = ' + gov.CV.toFixed(3) + ' per NDS 8.3.6. Lesser of CL or CV used, not both. Verify exponent.';
+    notes.push(cvNote);
+  }
+
+  notes.forEach((note, i) => {
+    checkPageSpace(12);
+    doc.text((i+1) + '. ' + note, marginL + 5, y, { maxWidth: contentW - 10 });
+    y += 11;
+  });
+
+  // ===== PE STAMP BLOCK =====
+  checkPageSpace(120);
+  sectionTitle('Professional Engineer Certification');
+  y += 5;
+  setDrawColor(navy);
+  doc.setLineWidth(2);
+  doc.roundedRect(marginL, y, contentW, 90, 3, 3, 'D');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  setColor(navy);
+  doc.text('PE SEAL & SIGNATURE', pageW / 2, y + 15, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  setColor(lightGray);
+  doc.text('Prepared by: _________________________________', marginL + 20, y + 40);
+  doc.text('License No: ________________  State: ___________', marginL + 20, y + 55);
+  doc.text('Date: ___________________  Signature: __________', marginL + 20, y + 70);
+  y += 100;
+
+  // ===== FOOTER =====
+  checkPageSpace(30);
+  y += 10;
+  setDrawColor(lightGray);
+  doc.setLineWidth(0.5);
+  doc.line(marginL, y, pageW - marginR, y);
+  y += 10;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  setColor([170, 170, 170]);
+  doc.text('This document was generated by Oasis Engineering. All results based on NDS 2018 and IRC 2021.', pageW / 2, y, { align: 'center' });
+  doc.text('Valid only for parameters shown. Local code amendments may apply. © ' + new Date().getFullYear() + ' Oasis Engineering.', pageW / 2, y + 9, { align: 'center' });
+
+  // ===== SAVE =====
+  doc.save('Oasis_Header_Spec_' + refNum + '.pdf');
+}
+
+// ============================================================================
+// INIT
+// ============================================================================
+init();
+</script>
+</body>
+</html>
