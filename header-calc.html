@@ -831,6 +831,13 @@ function calculate() {
   const S = b_total * d * d / 6;
   const I = b_total * d * d * d / 12;
 
+  // ---- Beam self-weight (added to dead load) ----
+  // Density: ~35 pcf sawn lumber, ~42 pcf engineered (LVL/PSL/LSL/glulam)
+  const density_pcf = (member.type === 'sawn') ? 35 : 42;
+  const selfWeight_plf = (A / 144) * density_pcf; // A in sq in → sq ft, × pcf = plf
+  loads.wDL += selfWeight_plf;
+  loads.selfWeight_plf = selfWeight_plf;
+
   // ---- ASD Load Combinations (IBC 1605.3.1) ----
   // For headers, we check the governing combination
   const combos = [];
@@ -1005,10 +1012,13 @@ function calculate() {
     // Per IBC Table 1604.3: serviceability deflection uses UNREDUCED transient loads
     // Not the 0.75-reduced combo values. Use full individual transient loads.
     // Find the governing unreduced transient load for this combo type
+    // Per IBC Table 1604.3: serviceability deflection uses individual unreduced transient loads
+    // For combined combos (D+0.75L+0.75Lr), check the GOVERNING individual transient,
+    // not the sum of all transients. Check each transient load independently.
     let w_live_unreduced;
     if (combo.name.indexOf('0.75') !== -1) {
-      // This is a reduced combo — use full unreduced transient loads instead
-      w_live_unreduced = (loads.wFloorLL || 0) + Math.max(loads.wRoofLL || 0, loads.wSnow || 0);
+      // Reduced combo — use the LARGEST individual unreduced transient load
+      w_live_unreduced = Math.max(loads.wFloorLL || 0, loads.wRoofLL || 0, loads.wSnow || 0);
     } else {
       w_live_unreduced = combo.wLive;
     }
